@@ -1,0 +1,8 @@
+{
+  "name": "akashi-master",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "ssh://git@personal.github.com/RyutaKojima/akashi-master.git",
+  "author": "RyutaKojima",
+  "license": "MIT"
+}
