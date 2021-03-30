@@ -1,4 +1,5 @@
 const timeoutSecond = 9 * 60 * 60;
+const locale = 'ja-JP'
 
 let attendanceTime = null;
 let timeoutID = null;
@@ -21,27 +22,40 @@ const openAkashiTab = () => {
     });
 }
 
-const registerAttendance = () => {
-    if (timeoutID) {
-        // AKASHIは先に押した出勤が勝つので、タイマー再設定はしない
-        return {
-            attendance: attendanceTime.toLocaleString('ja-JP')
-        }
+const setAkashiTimer = (milliSec) => {
+    if (milliSec <= 0) {
+        timeoutID = null;
+        attendanceTime = null;
+        return null;
     }
 
-    attendanceTime = new Date();
-    timeoutID = setTimeout(() => {
+    return setTimeout(() => {
             timeoutID = null;
             attendanceTime = null;
 
             openAkashiTab()
             notifyAkashiTime();
         },
-        timeoutSecond * 1000
+        milliSec
     );
+}
+
+const registerAttendance = () => {
+    if (timeoutID) {
+        // AKASHIは先に押した出勤が勝つので、タイマー再設定はしない
+        return {
+            attendance: attendanceTime.toLocaleString(locale)
+        }
+    }
+
+    attendanceTime = new Date();
+    timeoutID = setAkashiTimer(timeoutSecond * 1000);
+
+    chrome.storage.sync.set({attendanceTime: attendanceTime.getTime()}, () => {
+    });
 
     return {
-        attendance: attendanceTime.toLocaleString('ja-JP')
+        attendance: attendanceTime.toLocaleString(locale)
     }
 }
 
@@ -62,7 +76,7 @@ const getProgress = () => {
     timeLeft = timeLeft % 60;
 
     return {
-        attendance: attendanceTime.toLocaleString('ja-JP'),
+        attendance: attendanceTime.toLocaleString(locale),
         timeLeft: `あと ${timeLeftHour}:${timeLeftMinute}:${timeLeft}`,
     }
 }
@@ -82,4 +96,22 @@ chrome.runtime.onMessage.addListener((message, MessageSender, sendResponse) => {
     }
 
     sendResponse({'message': 'ok', ...response});
+});
+
+chrome.storage.sync.get(['attendanceTime'], function (result) {
+    console.log(result.attendanceTime);
+    if (!result.attendanceTime) {
+        return;
+    }
+
+    attendanceTime = new Date(result.attendanceTime);
+    const nowTime = new Date();
+
+    if (nowTime.toLocaleDateString(locale) !== attendanceTime.toLocaleDateString(locale)) {
+        attendanceTime = null;
+        return;
+    }
+
+    const elapsedMilliSec = nowTime.getTime() - attendanceTime.getTime()
+    timeoutID = setAkashiTimer(timeoutSecond * 1000 - elapsedMilliSec);
 });

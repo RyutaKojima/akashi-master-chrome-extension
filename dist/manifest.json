@@ -11,7 +11,8 @@
   "permissions": [
     "activeTab",
     "tabs",
-    "notifications"
+    "notifications",
+    "storage"
   ],
   "background": {
     "persistent": false,
