@@ -1,14 +1,13 @@
 const updateView = () => {
-    const attendance = document.querySelector('#attendance');
+    const scheduled = document.querySelector('#scheduled');
     const timeLeft = document.querySelector('#timeLeft');
 
     chrome.runtime.sendMessage({
             action: 'get-progress'
         },
         (response) => {
-            console.log(response)
-
-            attendance.innerHTML = response.attendance;
+            // console.log(response)
+            scheduled.innerHTML = response.scheduled;
             timeLeft.innerHTML = response.timeLeft;
         }
     )

@@ -1,10 +1,10 @@
 const timeoutSecond = 9 * 60 * 60;
 const locale = 'ja-JP'
 
-let attendanceTime = null;
+let alarmScheduledTime = null;
 
 const setAlarmTime = (scheduledTime) => {
-    attendanceTime = new Date(scheduledTime - timeoutSecond * 1000);
+    alarmScheduledTime = new Date(scheduledTime);
 };
 
 const fetchRegisterdAlarm = () => {
@@ -40,7 +40,7 @@ const createAkashiTimer = (milliSec) => {
         return null;
     }
 
-    if (attendanceTime) {
+    if (alarmScheduledTime) {
         return null;
     }
 
@@ -55,23 +55,19 @@ const createAkashiTimer = (milliSec) => {
 
 const registerAttendanceController = () => {
     createAkashiTimer(timeoutSecond * 1000);
-    attendanceTime = new Date();
 
-    return {
-        attendance: attendanceTime.toLocaleString(locale)
-    }
+    return {}
 }
 
 const getProgressController = () => {
-    if (attendanceTime === null) {
+    if (alarmScheduledTime === null) {
         return {
-            attendance: '出勤していません',
+            scheduled: '出勤していません',
             timeLeft: '-',
         }
     }
 
-    let elapsedSeconds = Math.floor((Date.now() - attendanceTime.getTime()) / 1000);
-    let timeLeft = timeoutSecond - elapsedSeconds;
+    let timeLeft = Math.floor((alarmScheduledTime.getTime() - Date.now() ) / 1000);
 
     const timeLeftHour = Math.floor(timeLeft / (60 * 60));
     timeLeft %= (60 * 60);
@@ -79,7 +75,7 @@ const getProgressController = () => {
     timeLeft = timeLeft % 60;
 
     return {
-        attendance: attendanceTime.toLocaleString(locale),
+        scheduled: alarmScheduledTime.toLocaleString(locale),
         timeLeft: `あと ${timeLeftHour}:${timeLeftMinute}:${timeLeft}`,
     }
 }
@@ -102,7 +98,7 @@ chrome.runtime.onMessage.addListener((message, MessageSender, sendResponse) => {
 });
 
 chrome.alarms.onAlarm.addListener(() => {
-    attendanceTime = null;
+    alarmScheduledTime = null;
 
     openAkashiTab()
     notifyAkashiTime();
