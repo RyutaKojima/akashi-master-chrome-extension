@@ -9,7 +9,6 @@
     "128": "img/icon_128.png"
   },
   "permissions": [
-    "tabs",
     "notifications",
     "alarms"
   ],
