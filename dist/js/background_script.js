@@ -2,7 +2,20 @@ const timeoutSecond = 9 * 60 * 60;
 const locale = 'ja-JP'
 
 let attendanceTime = null;
-let timeoutID = null;
+
+const setAlarmTime = (scheduledTime) => {
+    attendanceTime = new Date(scheduledTime - timeoutSecond * 1000);
+};
+
+const fetchRegisterdAlarm = () => {
+    chrome.alarms.get('akashi-alarm', (alarm) => {
+        if (!alarm) {
+            return;
+        }
+
+        setAlarmTime(alarm.scheduledTime)
+    })
+}
 
 const notifyAkashiTime = () => {
     const opt = {
@@ -22,44 +35,34 @@ const openAkashiTab = () => {
     });
 }
 
-const setAkashiTimer = (milliSec) => {
+const createAkashiTimer = (milliSec) => {
     if (milliSec <= 0) {
-        timeoutID = null;
-        attendanceTime = null;
         return null;
     }
 
-    return setTimeout(() => {
-            timeoutID = null;
-            attendanceTime = null;
-
-            openAkashiTab()
-            notifyAkashiTime();
-        },
-        milliSec
-    );
-}
-
-const registerAttendance = () => {
-    if (timeoutID) {
-        // AKASHIは先に押した出勤が勝つので、タイマー再設定はしない
-        return {
-            attendance: attendanceTime.toLocaleString(locale)
-        }
+    if (attendanceTime) {
+        return null;
     }
 
-    attendanceTime = new Date();
-    timeoutID = setAkashiTimer(timeoutSecond * 1000);
-
-    chrome.storage.sync.set({attendanceTime: attendanceTime.getTime()}, () => {
+    chrome.alarms.create('akashi-alarm', {
+        when: Date.now() + milliSec,
     });
+
+    fetchRegisterdAlarm();
+
+    return null;
+}
+
+const registerAttendanceController = () => {
+    createAkashiTimer(timeoutSecond * 1000);
+    attendanceTime = new Date();
 
     return {
         attendance: attendanceTime.toLocaleString(locale)
     }
 }
 
-const getProgress = () => {
+const getProgressController = () => {
     if (attendanceTime === null) {
         return {
             attendance: '出勤していません',
@@ -86,10 +89,10 @@ chrome.runtime.onMessage.addListener((message, MessageSender, sendResponse) => {
 
     switch (message.action) {
         case 'attendance':
-            response = registerAttendance();
+            response = registerAttendanceController();
             break;
         case 'get-progress':
-            response = getProgress();
+            response = getProgressController();
             break;
         default:
             response = {error: 'Unknown action'}
@@ -98,20 +101,11 @@ chrome.runtime.onMessage.addListener((message, MessageSender, sendResponse) => {
     sendResponse({'message': 'ok', ...response});
 });
 
-chrome.storage.sync.get(['attendanceTime'], function (result) {
-    console.log(result.attendanceTime);
-    if (!result.attendanceTime) {
-        return;
-    }
+chrome.alarms.onAlarm.addListener(() => {
+    attendanceTime = null;
 
-    attendanceTime = new Date(result.attendanceTime);
-    const nowTime = new Date();
-
-    if (nowTime.toLocaleDateString(locale) !== attendanceTime.toLocaleDateString(locale)) {
-        attendanceTime = null;
-        return;
-    }
-
-    const elapsedMilliSec = nowTime.getTime() - attendanceTime.getTime()
-    timeoutID = setAkashiTimer(timeoutSecond * 1000 - elapsedMilliSec);
+    openAkashiTab()
+    notifyAkashiTime();
 });
+
+fetchRegisterdAlarm();

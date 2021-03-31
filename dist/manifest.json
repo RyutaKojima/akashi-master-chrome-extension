@@ -1,7 +1,7 @@
 {
   "name": "Akashi Master",
   "description" : "AKASHIの退勤絶対に押し忘れないマン",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "manifest_version": 2,
   "icons": {
     "16": "img/icon_16.png",
@@ -11,7 +11,7 @@
   "permissions": [
     "tabs",
     "notifications",
-    "storage"
+    "alarms"
   ],
   "background": {
     "persistent": false,
