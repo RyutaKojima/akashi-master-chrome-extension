@@ -1,13 +1,31 @@
-const timeoutSecond = 9 * 60 * 60;
 const locale = 'ja-JP'
 
 let alarmScheduledTime = null;
+
+const fetchTime = () => {
+    return new Promise((resolve => {
+        chrome.storage.sync.get(['timerTime'], function (result) {
+            if (!result.timerTime) {
+                resolve('09:00');
+            }
+
+            resolve(result.timerTime);
+        });
+    }))
+}
+
+const openOptionPage = () => {
+    chrome.tabs.create({
+        url: chrome.runtime.getURL('options/options.html'),
+        active: true,
+    });
+};
 
 const setAlarmTime = (scheduledTime) => {
     alarmScheduledTime = new Date(scheduledTime);
 };
 
-const fetchRegisterdAlarm = () => {
+const fetchRegisteredAlarm = () => {
     chrome.alarms.get('akashi-alarm', (alarm) => {
         if (!alarm) {
             return;
@@ -48,13 +66,17 @@ const createAkashiTimer = (milliSec) => {
         when: Date.now() + milliSec,
     });
 
-    fetchRegisterdAlarm();
+    fetchRegisteredAlarm();
 
     return null;
 }
 
 const registerAttendanceController = () => {
-    createAkashiTimer(timeoutSecond * 1000);
+    fetchTime().then((loadTime) => {
+        const [hours, minutes] = loadTime.split(':');
+        const seconds = (hours * 60 * 60) + (minutes * 60)
+        createAkashiTimer(seconds * 1000);
+    });
 
     return {}
 }
@@ -67,7 +89,7 @@ const getProgressController = () => {
         }
     }
 
-    let timeLeft = Math.floor((alarmScheduledTime.getTime() - Date.now() ) / 1000);
+    let timeLeft = Math.floor((alarmScheduledTime.getTime() - Date.now()) / 1000);
 
     const timeLeftHour = Math.floor(timeLeft / (60 * 60));
     timeLeft %= (60 * 60);
@@ -80,6 +102,11 @@ const getProgressController = () => {
     }
 }
 
+const openOptionsPageController = () => {
+    openOptionPage()
+    return {}
+}
+
 chrome.runtime.onMessage.addListener((message, MessageSender, sendResponse) => {
     let response = {}
 
@@ -89,6 +116,9 @@ chrome.runtime.onMessage.addListener((message, MessageSender, sendResponse) => {
             break;
         case 'get-progress':
             response = getProgressController();
+            break;
+        case 'open-options':
+            response = openOptionsPageController();
             break;
         default:
             response = {error: 'Unknown action'}
@@ -104,4 +134,14 @@ chrome.alarms.onAlarm.addListener(() => {
     notifyAkashiTime();
 });
 
-fetchRegisterdAlarm();
+/**
+ * 拡張機能がインストール/アップデートされたときに発生するイベント
+ * See: https://developer.chrome.com/docs/extensions/reference/runtime/#event-onInstalled
+ */
+chrome.runtime.onInstalled.addListener((details) => {
+    if (details.reason === 'install') {
+        openOptionPage();
+    }
+});
+
+fetchRegisteredAlarm();

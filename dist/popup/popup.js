@@ -17,4 +17,8 @@ setInterval(() => {
     updateView();
 }, 1000);
 
+document.querySelector('#option').addEventListener('click', async () => {
+    chrome.runtime.sendMessage({action: 'open-options'});
+});
+
 updateView();
